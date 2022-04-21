@@ -2,8 +2,21 @@ const canvas = document.querySelector('canvas');
 const c = canvas.getContext('2d');
 
 const resolution = 10;
+const viewChange = 10;
+let xViewOffset = 0;
+let yViewOffset = 0;
 canvas.width = 600;
 canvas.height = 600;
+
+const heldKeys = {};
+
+document.addEventListener('keydown', e =>
+{
+	if (e.key === ' ') pause = !pause;
+	else heldKeys[e.key] = true;
+});
+
+document.addEventListener('keyup', e => heldKeys[e.key] = false);
 
 let lifeMap = {};
 // let lifeMap = { 0: { 1: 1 }, 1: { 2: 1 }, 2: { 0: 1, 1: 1, 2: 1 } };
@@ -24,8 +37,7 @@ const mouse = {
 	isInside: false,
 	x: 0, y: 0,
 };
-document.addEventListener('mousedown', () => mouse.isDown = true);
-document.addEventListener('mouseup', () => mouse.isDown = false);
+document.addEventListener('mouseup', () => mouse.isDown = true);
 canvas.addEventListener('mouseenter', () => mouse.isInside = true);
 canvas.addEventListener('mouseleave', () => mouse.isInside = false);
 canvas.addEventListener('mousemove', e =>
@@ -34,28 +46,11 @@ canvas.addEventListener('mousemove', e =>
 	mouse.y = e.pageY;
 })
 
-document.querySelector('.togglePause').addEventListener('click', e =>
-{
-	e.stopPropagation();
-	pause = !pause;
-})
-
-document.querySelector('.toggleMouseMode').addEventListener('click', e =>
-{
-	e.stopPropagation();
-	mouseMode = !mouseMode;
-})
-
-function addCell(x, y)
+function toggleCell(x, y)
 {
 	if (!lifeMap[y]) lifeMap[y] = {};
-	lifeMap[y][x] = 1;
-}
-
-function deleteCell(x, y)
-{
-	if (!lifeMap[y]) return;
-	delete lifeMap[y][x];
+	if (!lifeMap[y][x]) lifeMap[y][x] = 1;
+	else delete lifeMap[y][x];
 }
 
 function getNeighbors(x, y, map)
@@ -129,12 +124,9 @@ function updateLife()
 }
 
 let pause = false;
-let mouseMode = false;
 const fpsInterval = 1000 / 10;
 let then = 0;
 let now, elapsed;
-let xViewOffset = 0;
-let yViewOffset = 0;
 function loop(t)
 {
 	requestAnimationFrame(loop);
@@ -160,10 +152,16 @@ function loop(t)
 		})
 	})
 
-	if (mouse.isDown && mouse.isInside) (mouseMode ? deleteCell : addCell)(
+	if (mouse.isDown && mouse.isInside) toggleCell(
 		Math.floor((mouse.x - xViewOffset) / resolution),
 		Math.floor((mouse.y - yViewOffset) / resolution),
 	);
+	mouse.isDown = false;
+
+	if (heldKeys.ArrowUp || heldKeys.w) yViewOffset += viewChange;
+	if (heldKeys.ArrowDown || heldKeys.s) yViewOffset -= viewChange;
+	if (heldKeys.ArrowLeft || heldKeys.a) xViewOffset += viewChange;
+	if (heldKeys.ArrowRight || heldKeys.d) xViewOffset -= viewChange;
 
 	if (elapsed > fpsInterval)
 	{
