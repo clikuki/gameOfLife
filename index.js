@@ -1,8 +1,9 @@
 const canvas = document.querySelector('canvas');
 const c = canvas.getContext('2d');
 
-const resolution = 10;
 const viewChange = 10;
+const startResolution = 50;
+let resolution = startResolution;
 let xViewOffset = 0;
 let yViewOffset = 0;
 canvas.width = 600;
@@ -17,6 +18,24 @@ document.addEventListener('keydown', e =>
 });
 
 document.addEventListener('keyup', e => heldKeys[e.key] = false);
+
+let scale = 1;
+// DOES NOT WORK :(
+canvas.addEventListener('wheel', e =>
+{
+	let newScale = scale + e.deltaY * -0.001;
+	newScale = Math.min(Math.max(.2, newScale), 1);
+	if (newScale === scale) return;
+	scale = newScale;
+	resolution = startResolution * scale;
+
+	// center around mouse
+	const mouseXPercent = (mouse.x / canvas.width) * 100;
+	const mouseYPercent = (mouse.y / canvas.height) * 100;
+	const dir = Math.sign(e.deltaY);
+	xViewOffset += mouseXPercent * dir;
+	yViewOffset += mouseYPercent * dir;
+})
 
 let lifeMap = {};
 // let lifeMap = { 0: { 1: 1 }, 1: { 2: 1 }, 2: { 0: 1, 1: 1, 2: 1 } };
@@ -144,7 +163,7 @@ function loop(t)
 			const x = +i * resolution + xViewOffset;
 			const y = +j * resolution + yViewOffset;
 
-			if (x + resolution > canvas.width || y + resolution > canvas.width || x < 0 || y < 0) return;
+			if (x > canvas.width || y > canvas.width || x < -resolution || y < -resolution) return;
 
 			c.fillRect(
 				x, y, resolution, resolution
