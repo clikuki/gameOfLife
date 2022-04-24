@@ -2,17 +2,21 @@ const canvas = document.querySelector('canvas');
 const c = canvas.getContext('2d');
 const heldKeys = {};
 const viewChange = 10;
-const startResolution = 2;
+const startResolution = 5;
 const fpsInterval = 1000 / 10;
+const seedChanceInput = document.querySelector('.seedChance');
+const resolutionInput = document.querySelector('.resolution');
 const mouse = {
 	isDown: false,
 	isInside: false,
 	x: 0, y: 0,
 };
 
+let seedChance = .3;
 let then = 0;
 let now, elapsed;
 let pause = false;
+let updatePause = true;
 let scale = 1;
 let resolution = startResolution;
 let xViewOffset = 0;
@@ -23,20 +27,9 @@ let lifeIndices = []; // For Accessing all live cells
 canvas.width = 600;
 canvas.height = 600;
 
-for (let j = 0; j < canvas.height / resolution; j++)
-{
-	for (let i = 0; i < canvas.width / resolution; i++)
-	{
-		if (Math.random() < .5)
-		{
-			lifeIndices.push([i, j]);
-			if (!lifeMap[j]) lifeMap[j] = {};
-			lifeMap[j][i] = true;
-		}
-	}
-}
-
 // Event listeners
+seedChanceInput.addEventListener('keydown', e => e.stopPropagation());
+resolutionInput.addEventListener('keydown', e => e.stopPropagation());
 document.addEventListener('mouseup', () => mouse.isDown = true);
 canvas.addEventListener('mouseenter', () => mouse.isInside = true);
 canvas.addEventListener('mouseleave', () => mouse.isInside = false);
@@ -48,8 +41,7 @@ canvas.addEventListener('mousemove', e =>
 
 document.addEventListener('keydown', e =>
 {
-	if (e.key === ' ') pause = !pause;
-	else heldKeys[e.key] = true;
+	heldKeys[e.key] = true;
 });
 
 document.addEventListener('keyup', e => heldKeys[e.key] = false);
@@ -58,7 +50,6 @@ document.addEventListener('keyup', e => heldKeys[e.key] = false);
 canvas.addEventListener('wheel', e =>
 {
 	let newScale = scale + e.deltaY * -0.001;
-	newScale = Math.min(Math.max(.2, newScale), 1);
 	if (newScale === scale) return;
 	scale = newScale;
 	resolution = startResolution * scale;
@@ -72,6 +63,32 @@ canvas.addEventListener('wheel', e =>
 })
 
 // Functions
+function seedGame()
+{
+	lifeMap = {};
+	lifeIndices = [];
+	xViewOffset = 0;
+	yViewOffset = 0;
+
+	const newSeedChance = seedChanceInput.value;
+	const newResolution = resolutionInput.value;
+	if (newSeedChance !== '' && newSeedChance >= 0 && newSeedChance <= 1) seedChance = +newSeedChance;
+	if (newResolution !== '' && newResolution >= 1 && newSeedChance <= 100) resolution = +newResolution;
+
+	for (let j = 0; j < canvas.height / resolution; j++)
+	{
+		for (let i = 0; i < canvas.width / resolution; i++)
+		{
+			if (Math.random() < seedChance)
+			{
+				lifeIndices.push([i, j]);
+				if (!lifeMap[j]) lifeMap[j] = {};
+				lifeMap[j][i] = true;
+			}
+		}
+	}
+}
+
 function toggleCellState(i, j)
 {
 	if (!lifeMap[j]) lifeMap[j] = {};
@@ -180,7 +197,7 @@ function loop(t)
 		const x = i * resolution + xViewOffset;
 		const y = j * resolution + yViewOffset;
 
-		if (x > canvas.width || y > canvas.width
+		if (x > canvas.width || y > canvas.height
 			|| x < -resolution || y < -resolution) return;
 
 		c.fillRect(x, y, resolution, resolution);
@@ -196,6 +213,16 @@ function loop(t)
 	if (heldKeys.ArrowDown || heldKeys.s) yViewOffset -= viewChange;
 	if (heldKeys.ArrowLeft || heldKeys.a) xViewOffset += viewChange;
 	if (heldKeys.ArrowRight || heldKeys.d) xViewOffset -= viewChange;
+	if (heldKeys.r) seedGame();
+	if (heldKeys[' '])
+	{
+		if (updatePause)
+		{
+			updatePause = false;
+			pause = !pause;
+		}
+		else updatePause = true;
+	}
 
 	if (elapsed > fpsInterval)
 	{
@@ -203,4 +230,6 @@ function loop(t)
 		if (!pause) updateLife();
 	}
 }
+
+seedGame();
 loop();
